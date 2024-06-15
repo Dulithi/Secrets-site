@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from 'express';
 import mongoose from 'mongoose';
-import encrypt from "mongoose-encryption";
+import md5 from "md5";
 
 const app = express();
 app.use(express.urlencoded({extended: true}));
@@ -13,8 +13,6 @@ const port = process.env.PORT;
 const username = process.env.DATABASE_USERNAME;
 const password = process.env.DATABASE_PASSWORD;
 
-const secret = process.env.LONG_SECRET_KEY;
-
 const uri = `mongodb+srv://${username}:${password}@cluster0.qrml7jb.mongodb.net/secretsDB?retryWrites=true&w=majority&appName=Cluster0`;
 
 await mongoose.connect(uri);
@@ -24,7 +22,6 @@ const userSchema = new mongoose.Schema({
     password: String,
 });
 
-userSchema.plugin(encrypt, {secret: secret, encryptedFields: ['password']});
 
 const User = mongoose.model("User", userSchema);
 
@@ -38,7 +35,7 @@ app.get("/login", (req, res) => {
 
 app.post("/login", async (req, res) => {
     const username = req.body.username;
-    const password = req.body.password;
+    const password = md5(req.body.password);
 
     try {
         const user = await User.findOne({email: username});
@@ -61,7 +58,7 @@ app.get("/register", (req, res) => {
 app.post("/register", async (req, res) => {
     const user = new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password)
     });
     try {
         await user.save();
