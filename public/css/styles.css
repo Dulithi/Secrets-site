@@ -1,0 +1,12 @@
+
+body {
+  background-color: #E8ECEF;
+}
+
+
+.secret-text {
+  text-align: center;
+  font-size: 2rem;
+  color: #fff;
+  background-color: #000;
+}
