@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from 'express';
 import mongoose from 'mongoose';
-import md5 from "md5";
+import bcrypt from "bcrypt";
 
 const app = express();
 app.use(express.urlencoded({extended: true}));
@@ -12,6 +12,8 @@ app.use(express.static("public"));
 const port = process.env.PORT;
 const username = process.env.DATABASE_USERNAME;
 const password = process.env.DATABASE_PASSWORD;
+
+const saltRounds = 10;
 
 const uri = `mongodb+srv://${username}:${password}@cluster0.qrml7jb.mongodb.net/secretsDB?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -35,14 +37,16 @@ app.get("/login", (req, res) => {
 
 app.post("/login", async (req, res) => {
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     try {
         const user = await User.findOne({email: username});
         if(user) {
-            if(user.password === password) {
-                res.render("secrets");
-            }
+            bcrypt.compare(password, user.password).then(function(result) {
+                if(result) {
+                    res.render("secrets");
+                }
+            });
         }
         
     } catch (error) {
@@ -55,17 +59,22 @@ app.get("/register", (req, res) => {
     res.render("register");
 });
 
-app.post("/register", async (req, res) => {
-    const user = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
+app.post("/register", (req, res) => {
+
+    bcrypt.hash(req.body.password, saltRounds).then(function(hash) {
+        // Store hash in your password DB.
+        const user = new User({
+            email: req.body.username,
+            password: hash
+        });
+        try {
+            user.save();
+            res.render("secrets");
+        } catch (error) {
+            console.log(error);
+        }
     });
-    try {
-        await user.save();
-        res.render("secrets");
-    } catch (error) {
-        console.log(error);
-    }
+    
     
 });
 
